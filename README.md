@@ -50,6 +50,12 @@ Observation: When you hit a Measurement Line, the screen will flash, and your "g
 
 Avoid Obstacles: If your collapsed position overlaps with a "Classical Wall," you lose Fidelity (HP).
 
+Future directions of the game:
+
+Adding "noisy areas" which are essentially fancier obstacles that force your car to randomly take a new lane, which further increases the difficulty of the game. In that case, the frequency of arriving obstacles will be lessened. The physical concept behind this is that in quantum mechanics research, scientists often deal with immediately collpasing wavefunctions due to the universal background noise which forces a collapse of a particle without any intention. This feature will effectively showcase the phenomenon of noise in quantum measurement and control. 
+
+For further reading on quantum measurements please consult Quantum Measurement and Control by Wiseman. 
+
 Win Conditions
 
 Primary: Reach the finish line with Fidelity > 0.5.

@@ -3,9 +3,8 @@ import random
 import asyncio
 
 # --- CONFIGURATION ---
-WIDTH, HEIGHT = 1200, 800  
+WIDTH, HEIGHT = 1200, 800  # Wider for 4 players + UI
 FPS = 60
-TOTAL_DISTANCE = 10000 # Approximately 45-60 seconds of gameplay
 
 # Player Theme Colors
 PLAYER_THEMES = [
@@ -46,9 +45,7 @@ class QuantumVehicle:
     def measure(self):
         if not self.alive: return
         probs = [a**2 for a in self.amplitudes]
-        if max(self.amplitudes) < 0.9: 
-            self.successful_measures += 1
-        
+        if max(self.amplitudes) < 0.9: self.successful_measures += 1
         choice = random.choices([0, 1, 2, 3], weights=probs)[0]
         self.amplitudes = [0.0] * 4
         self.amplitudes[choice] = 1.0
@@ -56,7 +53,8 @@ class QuantumVehicle:
     def update_score(self):
         if self.alive:
             self.frames_alive += 1
-            self.score = (self.frames_alive // 10) + (self.successful_measures * 150)
+            # Math: (Survival Time * 1) + (Successful Measure Multiplier)
+            self.score = (self.frames_alive // 10) + (self.successful_measures * 50)
 
 class Button:
     def __init__(self, x, y, w, h, text, color, action_val=None):
@@ -67,7 +65,7 @@ class Button:
 
     def draw(self, surf, font):
         pygame.draw.rect(surf, self.color, self.rect, border_radius=8)
-        pygame.draw.rect(surf, (255, 255, 255), self.rect, 2, border_radius=8)
+        pygame.draw.rect(surf, (255, 255, 255), self.rect, 2, border_radius=8) # Border
         txt = font.render(self.text, True, (255, 255, 255))
         surf.blit(txt, (self.rect.centerx - txt.get_width()//2, self.rect.centery - txt.get_height()//2))
 
@@ -77,20 +75,18 @@ class Button:
 async def main():
     pygame.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Quantum Racing - Xu Research Group")
-    
-    font = pygame.font.SysFont(None, 24)
-    big_font = pygame.font.SysFont(None, 64)
+    pygame.display.set_caption("Quantum Arena - Xu Research Group")
+    font = pygame.font.SysFont("Consolas", 16)
+    title_font = pygame.font.SysFont("Consolas", 50)
     clock = pygame.time.Clock()
     
-    state = "MENU"
+    state = "MENU" # MENU, PLAYING, LEADERBOARD
     players = []
     num_players = 1
     obstacles = []
-    game_btns = []
     frame = 0
-    distance_to_finish = TOTAL_DISTANCE
 
+    # MENU BUTTONS
     menu_btns = [
         Button(WIDTH//2 - 100, 300, 200, 50, "1 PLAYER", (50, 50, 50), 1),
         Button(WIDTH//2 - 100, 370, 200, 50, "2 PLAYERS", (50, 50, 50), 2),
@@ -102,7 +98,6 @@ async def main():
         
         for event in pygame.event.get():
             if event.type == pygame.QUIT: return
-            
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if state == "MENU":
                     for btn in menu_btns:
@@ -110,17 +105,18 @@ async def main():
                             num_players = btn.action_val
                             players = [QuantumVehicle(i) for i in range(num_players)]
                             p_width = WIDTH // num_players
+                            # RE-GENERATE GAME BUTTONS
                             game_btns = []
                             for i in range(num_players):
                                 bx = i * p_width
                                 col = PLAYER_THEMES[i]["btn"]
                                 game_btns.append({
-                                    "H": Button(bx + 10, 740, 45, 40, "H", col),
-                                    "L": Button(bx + 60, 740, 45, 40, "<", col),
-                                    "R": Button(bx + 110, 740, 45, 40, ">", col),
-                                    "M": Button(bx + 160, 740, 110, 40, "MEASURE", col)
+                                    "H": Button(bx + 10, 740, 50, 40, "H", col),
+                                    "L": Button(bx + 70, 740, 50, 40, "<", col),
+                                    "R": Button(bx + 130, 740, 50, 40, ">", col),
+                                    "M": Button(bx + 190, 740, 90, 40, "MEASURE", col)
                                 })
-                            obstacles, frame, distance_to_finish, state = [], 0, TOTAL_DISTANCE, "PLAYING"
+                            obstacles, frame, state = [], 0, "PLAYING"
                 
                 elif state == "PLAYING":
                     for i, p_btns in enumerate(game_btns):
@@ -133,18 +129,16 @@ async def main():
                     if pygame.Rect(WIDTH//2-100, 600, 200, 50).collidepoint(mouse_pos):
                         state = "MENU"
 
+        # --- LOGIC ---
         if state == "MENU":
             screen.fill((10, 10, 20))
-            title = big_font.render("QUANTUM RACING SIM", True, (0, 255, 200))
+            title = title_font.render("QUANTUM ARENA", True, (0, 255, 200))
             screen.blit(title, (WIDTH//2 - title.get_width()//2, 150))
             for btn in menu_btns: btn.draw(screen, font)
 
         elif state == "PLAYING":
             frame += 1
-            distance_to_finish -= 4
-            if distance_to_finish <= 0: state = "LEADERBOARD"
-
-            if frame % 70 == 0:
+            if frame % 60 == 0:
                 blocked = random.sample([0, 1, 2, 3], random.randint(1, 2))
                 obstacles.append([blocked, -50])
 
@@ -155,14 +149,16 @@ async def main():
                         if 500 < obs[1] < 560:
                             for lane in obs[0]:
                                 if p.amplitudes[lane]**2 > 0.1: p.alive = False
-                        p.update_score()
+                    p.update_score()
                 if obs[1] > 800: obstacles.remove(obs)
 
+            # Draw Zones
             p_width = WIDTH // num_players
             for i, p in enumerate(players):
                 bx = i * p_width
                 theme = PLAYER_THEMES[i]
                 pygame.draw.rect(screen, theme["bg"], (bx, 0, p_width, HEIGHT))
+                pygame.draw.line(screen, (100, 100, 100), (bx, 0), (bx, HEIGHT), 1)
                 
                 for obs in obstacles:
                     for lane in obs[0]:
@@ -177,35 +173,37 @@ async def main():
                             s = pygame.Surface((40, 50), pygame.SRCALPHA)
                             pygame.draw.rect(s, (*theme["car"], int(prob*255)), (0, 0, 40, 50), border_radius=5)
                             screen.blit(s, (cx, 500))
-                    # Probability Visualizers
+                    # Probability Bars
                     for l_idx, amp in enumerate(p.amplitudes):
                         px = bx + (l_idx * (p_width // 4)) + 15
-                        pygame.draw.rect(screen, (60, 60, 60), (px, 680, 40, 40), 1)
+                        pygame.draw.rect(screen, (50, 50, 50), (px, 680, 40, 40), 1)
                         pygame.draw.rect(screen, theme["car"], (px, 720-(amp**2*40), 40, amp**2*40))
                 else:
-                    msg = font.render("CRASH", True, (255, 50, 50))
+                    msg = font.render("DECOHERENCE CRASH", True, (255, 50, 50))
                     screen.blit(msg, (bx + p_width//2 - msg.get_width()//2, 400))
 
-                screen.blit(font.render(f"SCORE: {p.score}", True, (255, 255, 255)), (bx + 10, 40))
+                score_txt = font.render(f"SCORE: {p.score}", True, (255, 255, 255))
+                screen.blit(score_txt, (bx + 10, 10))
                 for btn in game_btns[i].values(): btn.draw(screen, font)
 
-            # GLOBAL PROGRESS BAR
-            bar_rect = pygame.Rect(WIDTH//2 - 200, 10, 400, 20)
-            pygame.draw.rect(screen, (50, 50, 50), bar_rect, border_radius=10)
-            progress = (TOTAL_DISTANCE - distance_to_finish) / TOTAL_DISTANCE
-            pygame.draw.rect(screen, (0, 255, 200), (bar_rect.x, bar_rect.y, int(400*progress), 20), border_radius=10)
-
-            if all(not p.alive for p in players): state = "LEADERBOARD"
+            # Check if all players dead
+            if all(not p.alive for p in players):
+                state = "LEADERBOARD"
 
         elif state == "LEADERBOARD":
             screen.fill((5, 5, 10))
-            lbl = big_font.render("TRIAL RANKINGS", True, (255, 215, 0))
+            lbl = title_font.render("FINAL RANKINGS", True, (255, 215, 0))
             screen.blit(lbl, (WIDTH//2 - lbl.get_width()//2, 100))
-            sorted_p = sorted(players, key=lambda x: x.score, reverse=True)
-            for i, p in enumerate(sorted_p):
+            
+            # Sort players by score
+            sorted_players = sorted(players, key=lambda x: x.score, reverse=True)
+            for i, p in enumerate(sorted_players):
                 col = PLAYER_THEMES[p.idx]["car"]
-                txt = font.render(f"{i+1}. {PLAYER_THEMES[p.idx]['name']} - {p.score} PTS", True, col)
-                screen.blit(txt, (WIDTH//2 - 100, 250 + i*50))
+                p_name = PLAYER_THEMES[p.idx]["name"]
+                row = font.render(f"{i+1}. {p_name} --- {p.score} QUANTUM PTS", True, col)
+                screen.blit(row, (WIDTH//2 - 150, 250 + i*50))
+            
+            # Back to menu button
             Button(WIDTH//2-100, 600, 200, 50, "MAIN MENU", (100, 100, 100)).draw(screen, font)
 
         pygame.display.flip()

@@ -1,4 +1,4 @@
-# xu_group
+# Dr. Xu group - Adhyantha Chandrasekaran
 You can find quantum computing and information science projects done under the guidance of Dr. Shenglong Xu, Texas A&M
 
 Some of the current projects I am working on:
